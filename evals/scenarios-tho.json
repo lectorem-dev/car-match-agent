@@ -1,0 +1,40 @@
+[
+  {
+    "id": "vague_request_with_clarification",
+    "name": "Нечеткий запрос с уточняющим вопросом",
+    "allow_clarifying_question": true,
+    "initial_session": null,
+    "steps": [
+      {
+        "step_type": "user_message",
+        "user_message": "Хочу подобрать машину"
+      },
+      {
+        "step_type": "expect_clarifying_question"
+      },
+      {
+        "step_type": "user_message",
+        "user_message": "Бюджет до 18000 долларов, нужна первая машина для города, лучше автомат"
+      },
+      {
+        "step_type": "expect_recommendation",
+        "acceptable_car_ids": [
+          "8af3fb2b-6b55-4035-8593-f71af8bfd35d",
+          "915629b1-7d48-48f4-8eae-f9b19d403862",
+          "6042a84b-2d56-41d0-b75e-0f95ffea693b"
+        ]
+      },
+      {
+        "step_type": "user_select_car",
+        "selected_car_id": "8af3fb2b-6b55-4035-8593-f71af8bfd35d"
+      },
+      {
+        "step_type": "user_request_reservation",
+        "user_message": "Хочу забронировать выбранную машину"
+      },
+      {
+        "step_type": "expect_reservation_created"
+      }
+    ]
+  }
+]

@@ -1,0 +1,65 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# JetBrains / editors
+.idea/
+*.iml
+.vscode/
+
+# Python cache and tooling
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Build artifacts
+build/
+dist/
+site/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+
+# Logs and OS junk
+*.log
+*.pid
+*.out
+*.err
+.DS_Store
+Thumbs.db
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary editor files
+*.swp
+*.swo
+*~
+
+# Example datasets must stay in git
+!data/
+!data/**
+!app/data/
+!app/data/**
