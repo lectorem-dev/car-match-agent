@@ -120,8 +120,8 @@ class YandexLLMClient:
 
         return output_text
 
+    @staticmethod
     def _build_json_schema_format(
-            self,
             schema: Dict[str, Any],
             schema_name: str,
     ) -> Dict[str, Any]:
@@ -148,7 +148,8 @@ class YandexLLMClient:
             return
         LOGGER.info(f"{LLM_LOG_COLOR}{message}{LLM_LOG_RESET}", *args)
 
-    def _shorten(self, text: str, limit: int) -> str:
+    @staticmethod
+    def _shorten(text: str, limit: int) -> str:
         """Обрезает длинный текст для логов."""
         clean = " ".join((text or "").split())
 

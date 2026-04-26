@@ -120,7 +120,8 @@ class Extractor:
 
         return ExtractorResult.model_validate_json(raw_response)
 
-    def _session_to_dict(self, session: UserSession) -> Dict[str, Any]:
+    @staticmethod
+    def _session_to_dict(session: UserSession) -> Dict[str, Any]:
         """Преобразует UserSession в словарь для промпта."""
 
         return {

@@ -2,17 +2,21 @@ import logging
 from typing import List, Optional
 
 from app.agents.critic.agent import CriticAgent
-from app.agents.domain_guard.agent import DomainGuardAgent
-from app.agents.domain_guard.schemas import DomainStatus
+from app.agents.guard.agent import DomainGuardAgent
+from app.agents.guard.schemas import DomainStatus
 from app.agents.extractor.agent import Extractor
+from app.agents.extractor.schemas import ExtractorResult
 from app.agents.planner.agent import PlannerAgent
 from app.agents.planner.schemas import PlannerResult
 from app.agents.reservation.agent import ReservationAgent
-from app.agents.reservation.schemas import ReservationStatus
+from app.agents.reservation.schemas import (
+    ReservationCreatedResult,
+    ReservationIntent,
+)
 from app.catalog.car_catalog import CarCatalog
-from app.domain.agent_response import AgentResponse, CarRecommendation, SessionUpdate
 from app.domain.car import Car
 from app.domain.user_session import DialogStatus, UserSession
+from app.orchestrator.schemas import PipelineResponse, RecommendedCar
 from app.services.session_update_service import SessionUpdateService
 
 
@@ -67,7 +71,7 @@ class Pipeline:
             user_message: str,
             session: UserSession,
             allow_clarifying_question: bool = True,
-    ) -> AgentResponse:
+    ) -> PipelineResponse:
         """Обрабатывает сообщение пользователя через весь пайплайн."""
 
         self._log("Новое сообщение пользователя")
@@ -83,10 +87,8 @@ class Pipeline:
         if domain_result.domain_status == DomainStatus.OUT_OF_DOMAIN:
             self._log("Запрос вне домена, пайплайн остановлен")
 
-            return AgentResponse(
+            return PipelineResponse(
                 user_message=domain_result.user_message,
-                should_ask_clarifying_question=False,
-                recommended_cars=[],
             )
 
         reservation_result = self.reservation.handle(
@@ -94,14 +96,16 @@ class Pipeline:
             session=session,
         )
 
-        self._log("reservation_status=%s", reservation_result.status.value)
+        self._log("reservation_intent=%s", reservation_result.intent.value)
 
-        if reservation_result.status != ReservationStatus.NOT_RESERVATION:
+        if reservation_result.intent == ReservationIntent.RESERVATION_REQUEST:
             self._log("Сообщение обработано ReservationAgent")
 
-            return self._reservation_result_to_agent_response(
-                reservation_result=reservation_result,
+            return self._handle_reservation_request(
+                session=session,
             )
+
+        self._log("reservation_status=not_reservation_request")
 
         extraction = self.extractor.extract(
             user_message=user_message,
@@ -133,15 +137,14 @@ class Pipeline:
 
         return self._handle_recommendation(
             session=session,
-            session_update=extraction.session_update,
         )
 
     def _handle_missing_required_data(
             self,
             session: UserSession,
-            extraction,
+            extraction: ExtractorResult,
             allow_clarifying_question: bool,
-    ) -> AgentResponse:
+    ) -> PipelineResponse:
         """Обрабатывает ситуацию, когда данных для подбора мало."""
 
         self._log("required_data_ready=false")
@@ -152,9 +155,8 @@ class Pipeline:
 
             self._log("clarifying_question=true")
 
-            return AgentResponse(
+            return PipelineResponse(
                 user_message=question,
-                session_update=extraction.session_update,
                 should_ask_clarifying_question=True,
                 clarifying_question=question,
             )
@@ -166,26 +168,21 @@ class Pipeline:
         if session.has_required_data_for_recommendation():
             return self._handle_recommendation(
                 session=session,
-                session_update=extraction.session_update,
             )
 
         self._log("Пайплайн остановлен: недостаточно данных")
 
-        return AgentResponse(
+        return PipelineResponse(
             user_message=(
                 "Для подбора машины нужен минимум: бюджет и цель покупки. "
                 "В этом сценарии уточняющий вопрос отключен, поэтому рекомендация не выполняется."
             ),
-            session_update=extraction.session_update,
-            should_ask_clarifying_question=False,
-            recommended_cars=[],
         )
 
     def _handle_recommendation(
             self,
             session: UserSession,
-            session_update: SessionUpdate,
-    ) -> AgentResponse:
+    ) -> PipelineResponse:
         """Запускает Planner и Critic."""
 
         self._log("recommendation_started=true")
@@ -205,7 +202,7 @@ class Pipeline:
             )
 
             recommendations = [
-                CarRecommendation(
+                RecommendedCar(
                     car_id=item.car_id,
                     reason=item.reason,
                     risk_note=item.risk_note,
@@ -215,7 +212,7 @@ class Pipeline:
 
             critic_result = self.critic.review(
                 session=session,
-                recommendations=recommendations,
+                recommendations=planner_result.recommendations,
                 tool_cars=tool_cars,
                 user_message=planner_result.user_message,
             )
@@ -228,10 +225,8 @@ class Pipeline:
                 self._log("recommendation_finished=true")
                 self._log("recommended_cars_count=%s", len(recommendations))
 
-                return AgentResponse(
+                return PipelineResponse(
                     user_message=planner_result.user_message,
-                    session_update=session_update,
-                    should_ask_clarifying_question=False,
                     recommended_cars=recommendations,
                 )
 
@@ -240,31 +235,51 @@ class Pipeline:
 
         self._log("recommendation_failed=true")
 
-        return AgentResponse(
+        return PipelineResponse(
             user_message=(
                     "Не удалось подготовить корректную рекомендацию. "
                     "Проблемы проверки: " + "; ".join(critic_issues)
             ),
-            session_update=session_update,
-            should_ask_clarifying_question=False,
-            recommended_cars=[],
         )
 
-    def _reservation_result_to_agent_response(
+    def _handle_reservation_request(
             self,
-            reservation_result,
-    ) -> AgentResponse:
-        """Преобразует результат бронирования в AgentResponse."""
+            session: UserSession,
+    ) -> PipelineResponse:
+        """Обрабатывает запрос на бронирование после определения intent."""
 
-        return AgentResponse(
-            user_message=reservation_result.user_message,
-            should_ask_clarifying_question=False,
-            recommended_cars=[],
-            selected_car_id=reservation_result.selected_car_id,
-            ready_for_reservation=reservation_result.status == ReservationStatus.CREATED,
+        if session.selected_car_id is None:
+            self._log("reservation_status=need_car_selection")
+
+            return PipelineResponse(
+                user_message="Сначала нужно выбрать конкретную машину, затем я создам заявку на бронь.",
+            )
+
+        selected_car = self.catalog.find_by_id(session.selected_car_id)
+
+        if selected_car is None:
+            self._log("reservation_status=car_not_found")
+
+            return PipelineResponse(
+                user_message="Выбранная машина не найдена в каталоге. Нужно выбрать другой автомобиль.",
+            )
+
+        session.mark_reservation_created()
+        created_result = ReservationCreatedResult(
+            user_message=f"Mock-заявка на бронь создана: {selected_car.title()}.",
         )
 
-    def _build_missing_data_question(self, session: UserSession) -> str:
+        self._log("reservation_status=created")
+        self._log("selected_car_id=%s", selected_car.id)
+
+        return PipelineResponse(
+            user_message=created_result.user_message,
+            selected_car_id=selected_car.id,
+            ready_for_reservation=created_result.ready_for_reservation,
+        )
+
+    @staticmethod
+    def _build_missing_data_question(session: UserSession) -> str:
         """Собирает уточняющий вопрос по недостающим данным."""
 
         if session.budget_max is None and session.purpose is None:

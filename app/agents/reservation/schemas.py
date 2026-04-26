@@ -1,6 +1,5 @@
 from enum import Enum
 from typing import Optional
-from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -11,15 +10,7 @@ class ReservationIntent(str, Enum):
     NOT_RESERVATION_REQUEST = "not_reservation_request"
 
 
-# Результат обработки бронирования.
-class ReservationStatus(str, Enum):
-    CREATED = "created"
-    NEED_CAR_SELECTION = "need_car_selection"
-    CAR_NOT_FOUND = "car_not_found"
-    NOT_RESERVATION = "not_reservation"
-
-
-class ReservationDecision(BaseModel):
+class ReservationResult(BaseModel):
     """Решение ReservationAgent по сообщению пользователя."""
 
     intent: ReservationIntent = Field(
@@ -38,9 +29,8 @@ class ReservationDecision(BaseModel):
     )
 
 
-class ReservationResult(BaseModel):
-    """Результат работы ReservationAgent."""
+class ReservationCreatedResult(BaseModel):
+    """Результат успешного создания mock-заявки."""
 
-    status: ReservationStatus
     user_message: str
-    selected_car_id: Optional[UUID] = None
+    ready_for_reservation: bool = True

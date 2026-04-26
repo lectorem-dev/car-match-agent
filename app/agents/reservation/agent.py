@@ -3,10 +3,8 @@ from typing import Any, Dict, Optional
 
 from app.agents.reservation.prompts import RESERVATION_SYSTEM_PROMPT
 from app.agents.reservation.schemas import (
-    ReservationDecision,
     ReservationIntent,
     ReservationResult,
-    ReservationStatus,
 )
 from app.catalog.car_catalog import CarCatalog
 from app.domain.user_session import UserSession
@@ -31,43 +29,20 @@ class ReservationAgent:
     ) -> ReservationResult:
         """Обрабатывает запрос на бронь."""
 
-        decision = self._make_decision(
+        result = self._make_decision(
             user_message=user_message,
             session=session,
         )
 
-        if decision.intent == ReservationIntent.NOT_RESERVATION_REQUEST:
-            return ReservationResult(
-                status=ReservationStatus.NOT_RESERVATION,
-                user_message=decision.user_message,
-            )
+        if result.intent == ReservationIntent.NOT_RESERVATION_REQUEST:
+            return result
 
         self._try_select_car_by_title(
             session=session,
-            selected_car_title=decision.selected_car_title,
+            selected_car_title=result.selected_car_title,
         )
 
-        if session.selected_car_id is None:
-            return ReservationResult(
-                status=ReservationStatus.NEED_CAR_SELECTION,
-                user_message="Сначала нужно выбрать конкретную машину, затем я создам заявку на бронь.",
-            )
-
-        selected_car = self.catalog.find_by_id(session.selected_car_id)
-
-        if selected_car is None:
-            return ReservationResult(
-                status=ReservationStatus.CAR_NOT_FOUND,
-                user_message="Выбранная машина не найдена в каталоге. Нужно выбрать другой автомобиль.",
-            )
-
-        session.mark_reservation_created()
-
-        return ReservationResult(
-            status=ReservationStatus.CREATED,
-            user_message=f"Mock-заявка на бронь создана: {selected_car.title()}.",
-            selected_car_id=selected_car.id,
-        )
+        return result
 
     def is_reservation_request(
             self,
@@ -87,7 +62,7 @@ class ReservationAgent:
             self,
             user_message: str,
             session: UserSession,
-    ) -> ReservationDecision:
+    ) -> ReservationResult:
         """Определяет намерение бронирования."""
 
         payload = {
@@ -98,11 +73,11 @@ class ReservationAgent:
         raw_response = self.llm_client.generate(
             system_prompt=RESERVATION_SYSTEM_PROMPT,
             user_prompt=json.dumps(payload, ensure_ascii=False, indent=2),
-            response_schema=ReservationDecision.model_json_schema(),
-            response_schema_name="reservation_decision",
+            response_schema=ReservationResult.model_json_schema(),
+            response_schema_name="reservation_result",
         )
 
-        return ReservationDecision.model_validate_json(raw_response)
+        return ReservationResult.model_validate_json(raw_response)
 
     def _try_select_car_by_title(
             self,
@@ -126,7 +101,8 @@ class ReservationAgent:
                 session.select_car(car.id)
                 return
 
-    def _session_to_dict(self, session: UserSession) -> Dict[str, Any]:
+    @staticmethod
+    def _session_to_dict(session: UserSession) -> Dict[str, Any]:
         """Преобразует UserSession в словарь для промпта."""
 
         return {

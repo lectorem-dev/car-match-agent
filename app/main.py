@@ -1,7 +1,12 @@
 from pathlib import Path
+import sys
+
+
+if __package__ is None or __package__ == "":
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.agents.critic.agent import CriticAgent
-from app.agents.domain_guard.agent import DomainGuardAgent
+from app.agents.guard.agent import DomainGuardAgent
 from app.agents.extractor.agent import Extractor
 from app.agents.planner.agent import PlannerAgent
 from app.agents.reservation.agent import ReservationAgent

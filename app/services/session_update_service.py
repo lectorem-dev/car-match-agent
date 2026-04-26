@@ -1,94 +1,100 @@
-from app.domain.agent_response import SessionUpdate
+from app.agents.extractor.schemas import SessionUpdate
 from app.domain.user_session import DialogStatus, UserSession
 
-
 class SessionUpdateService:
-    """Сервис для применения SessionUpdate к UserSession."""
+    """Сервис для применения SessionUpdate к UserSession.    """
 
-    def apply_update(
-            self,
-            session: UserSession,
-            update: SessionUpdate,
-    ) -> UserSession:
-        """Обновляет память диалога данными, которые извлек агент."""
+    def apply_update(self, session, update):
+        pass
 
-        if update.budget_min is not None:
-            session.budget_min = update.budget_min
+    def apply_update(self, session, update):
+        pass
 
-        if update.budget_max is not None:
-            session.budget_max = update.budget_max
 
-        if update.purpose is not None:
-            session.purpose = update.purpose
+def _merge_notes(
+        old_notes: str,
+        new_notes: str,
+) -> str:
+    """Склеивает старые и новые заметки пользователя."""
 
-        if update.experience_level is not None:
-            session.experience_level = update.experience_level
+    if not old_notes:
+        return new_notes.strip()
 
-        if update.family_size is not None:
-            session.family_size = update.family_size
+    return f"{old_notes.strip()} {new_notes.strip()}"
 
-        self._extend_unique(session.preferred_body_types, update.preferred_body_types)
-        self._extend_unique(session.preferred_brands, update.preferred_brands)
 
-        self._extend_unique(session.must_have, update.must_have)
-        self._extend_unique(session.must_not_have, update.must_not_have)
+def _refresh_dialog_status(session: UserSession) -> None:
+    """Обновляет статус диалога после изменения памяти."""
 
-        if update.user_notes:
-            session.user_notes = self._merge_notes(
-                old_notes=session.user_notes,
-                new_notes=update.user_notes,
-            )
+    # Если уже выбрана машина или создана заявка, не откатываем статус назад.
+    if session.dialog_status in {
+        DialogStatus.CAR_SELECTED,
+        DialogStatus.READY_FOR_RESERVATION,
+        DialogStatus.RESERVATION_CREATED,
+    }:
+        return
 
-        self._refresh_dialog_status(session)
+    # Если собран минимум данных, можно переходить к рекомендациям.
+    if session.has_required_data_for_recommendation():
+        session.dialog_status = DialogStatus.READY_TO_RECOMMEND
+    else:
+        session.dialog_status = DialogStatus.INITIAL_SURVEY
 
-        return session
 
-    def _refresh_dialog_status(self, session: UserSession) -> None:
-        """Обновляет статус диалога после изменения памяти."""
+def _extend_unique(
+        target: list[str],
+        values: list[str],
+) -> None:
+    """Добавляет новые значения в список без дублей."""
 
-        # Если уже выбрана машина или создана заявка, не откатываем статус назад.
-        if session.dialog_status in {
-            DialogStatus.CAR_SELECTED,
-            DialogStatus.READY_FOR_RESERVATION,
-            DialogStatus.RESERVATION_CREATED,
-        }:
-            return
+    existing_values = {value.lower() for value in target}
 
-        # Если собран минимум данных, можно переходить к рекомендациям.
-        if session.has_required_data_for_recommendation():
-            session.dialog_status = DialogStatus.READY_TO_RECOMMEND
-        else:
-            session.dialog_status = DialogStatus.INITIAL_SURVEY
+    for value in values:
+        normalized_value = value.strip()
 
-    def _extend_unique(
-            self,
-            target: list[str],
-            values: list[str],
-    ) -> None:
-        """Добавляет новые значения в список без дублей."""
+        if not normalized_value:
+            continue
 
-        existing_values = {value.lower() for value in target}
+        if normalized_value.lower() in existing_values:
+            continue
 
-        for value in values:
-            normalized_value = value.strip()
+        target.append(normalized_value)
+        existing_values.add(normalized_value.lower())
 
-            if not normalized_value:
-                continue
 
-            if normalized_value.lower() in existing_values:
-                continue
+def apply_update(
+        session: UserSession,
+        update: SessionUpdate,
+) -> UserSession:
+    """Обновляет память диалога данными, которые извлек агент."""
 
-            target.append(normalized_value)
-            existing_values.add(normalized_value.lower())
+    if update.budget_min is not None:
+        session.budget_min = update.budget_min
 
-    def _merge_notes(
-            self,
-            old_notes: str,
-            new_notes: str,
-    ) -> str:
-        """Склеивает старые и новые заметки пользователя."""
+    if update.budget_max is not None:
+        session.budget_max = update.budget_max
 
-        if not old_notes:
-            return new_notes.strip()
+    if update.purpose is not None:
+        session.purpose = update.purpose
 
-        return f"{old_notes.strip()} {new_notes.strip()}"
+    if update.experience_level is not None:
+        session.experience_level = update.experience_level
+
+    if update.family_size is not None:
+        session.family_size = update.family_size
+
+    _extend_unique(session.preferred_body_types, update.preferred_body_types)
+    _extend_unique(session.preferred_brands, update.preferred_brands)
+
+    _extend_unique(session.must_have, update.must_have)
+    _extend_unique(session.must_not_have, update.must_not_have)
+
+    if update.user_notes:
+        session.user_notes = _merge_notes(
+            old_notes=session.user_notes,
+            new_notes=update.user_notes,
+        )
+
+    _refresh_dialog_status(session)
+
+    return session

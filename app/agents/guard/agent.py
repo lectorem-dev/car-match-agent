@@ -1,8 +1,8 @@
 import json
 from typing import Any, Dict
 
-from app.agents.domain_guard.prompts import DOMAIN_GUARD_SYSTEM_PROMPT
-from app.agents.domain_guard.schemas import DomainGuardResult, DomainStatus
+from app.agents.guard.prompts import DOMAIN_GUARD_SYSTEM_PROMPT
+from app.agents.guard.schemas import DomainGuardResult, DomainStatus
 from app.domain.user_session import UserSession
 from app.llm.yandex_llm_client import YandexLLMClient
 
@@ -48,7 +48,8 @@ class DomainGuardAgent:
 
         return result.domain_status == DomainStatus.IN_DOMAIN
 
-    def _session_to_dict(self, session: UserSession) -> Dict[str, Any]:
+    @staticmethod
+    def _session_to_dict(session: UserSession) -> Dict[str, Any]:
         """Преобразует UserSession в словарь для промпта."""
 
         return {

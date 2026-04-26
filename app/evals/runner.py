@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import Optional, Protocol
 
-from app.domain.agent_response import AgentResponse
 from app.domain.user_session import UserSession
 from app.evals.judge import ScenarioJudge
 from app.evals.schemas import ScenarioStepType, TestScenario
+from app.orchestrator.schemas import PipelineResponse
 
 
 class AgentLike(Protocol):
@@ -15,7 +15,7 @@ class AgentLike(Protocol):
             user_message: str,
             session: UserSession,
             allow_clarifying_question: bool,
-    ) -> AgentResponse:
+    ) -> PipelineResponse:
         """Обрабатывает сообщение пользователя и возвращает структурированный ответ."""
         ...
 
@@ -44,7 +44,7 @@ class ScenarioRunner:
     def run(self, scenario: TestScenario) -> ScenarioRunResult:
         """Запускает один сценарий целиком."""
         session = scenario.initial_session or UserSession()
-        last_response: Optional[AgentResponse] = None
+        last_response: Optional[PipelineResponse] = None
 
         try:
             for step in scenario.steps:
@@ -62,6 +62,7 @@ class ScenarioRunner:
                         scenario=scenario,
                         step=step,
                         response=last_response,
+                        session=session,
                     )
 
                 elif step.step_type == ScenarioStepType.EXPECT_CLARIFYING_QUESTION:
@@ -72,6 +73,7 @@ class ScenarioRunner:
                         scenario=scenario,
                         step=step,
                         response=last_response,
+                        session=session,
                     )
 
                 elif step.step_type == ScenarioStepType.EXPECT_RECOMMENDATION:
@@ -82,6 +84,7 @@ class ScenarioRunner:
                         scenario=scenario,
                         step=step,
                         response=last_response,
+                        session=session,
                     )
 
                 elif step.step_type == ScenarioStepType.USER_SELECT_CAR:
@@ -109,6 +112,7 @@ class ScenarioRunner:
                         scenario=scenario,
                         step=step,
                         response=last_response,
+                        session=session,
                     )
 
                 elif step.step_type == ScenarioStepType.EXPECT_RESERVATION_CREATED:

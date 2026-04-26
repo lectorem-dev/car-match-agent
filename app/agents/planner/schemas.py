@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
-class PlannedCarRecommendation(BaseModel):
+class PlannedCar(BaseModel):
     """Одна машина, выбранная PlannerAgent."""
 
     car_id: UUID
@@ -15,7 +15,7 @@ class PlannedCarRecommendation(BaseModel):
 class PlannerResult(BaseModel):
     """Результат подбора машин."""
 
-    recommendations: List[PlannedCarRecommendation] = Field(
+    recommendations: List[PlannedCar] = Field(
         default_factory=list,
         min_length=1,
         max_length=5,

@@ -91,7 +91,8 @@ class PlannerAgent:
 
         return json.dumps(payload, ensure_ascii=False, indent=2)
 
-    def _session_to_dict(self, session: UserSession) -> Dict[str, Any]:
+    @staticmethod
+    def _session_to_dict(session: UserSession) -> Dict[str, Any]:
         """Преобразует UserSession в словарь для промпта."""
 
         return {
@@ -109,7 +110,8 @@ class PlannerAgent:
             "dialog_status": session.dialog_status.value,
         }
 
-    def _car_to_dict(self, car: Car) -> Dict[str, Any]:
+    @staticmethod
+    def _car_to_dict(car: Car) -> Dict[str, Any]:
         """Преобразует Car в словарь для промпта."""
 
         return {
@@ -128,7 +130,8 @@ class PlannerAgent:
             "description": car.description,
         }
 
-    def _first_or_none(self, values: List[str]) -> Optional[str]:
+    @staticmethod
+    def _first_or_none(values: List[str]) -> Optional[str]:
         """Возвращает первое значение списка или None."""
         if not values:
             return None

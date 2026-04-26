@@ -8,4 +8,3 @@ class CriticResult(BaseModel):
 
     approved: bool
     issues: List[str] = Field(default_factory=list)  # Найденные проблемы.
-    fixed_user_message: str = ""  # Исправленная версия ответа, если нужна.

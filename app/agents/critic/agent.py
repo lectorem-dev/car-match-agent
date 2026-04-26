@@ -3,8 +3,8 @@ from typing import Any, Dict, List
 
 from app.agents.critic.prompts import CRITIC_SYSTEM_PROMPT
 from app.agents.critic.schemas import CriticResult
+from app.agents.planner.schemas import PlannedCar
 from app.llm.yandex_llm_client import YandexLLMClient
-from app.domain.agent_response import CarRecommendation
 from app.domain.car import Car
 from app.domain.user_session import UserSession
 
@@ -21,7 +21,7 @@ class CriticAgent:
     def review(
             self,
             session: UserSession,
-            recommendations: List[CarRecommendation],
+            recommendations: List[PlannedCar],
             tool_cars: List[Car],
             user_message: str,
     ) -> CriticResult:
@@ -37,7 +37,6 @@ class CriticAgent:
             return CriticResult(
                 approved=False,
                 issues=code_issues,
-                fixed_user_message="",
             )
 
         llm_result = self._run_llm_checks(
@@ -52,7 +51,7 @@ class CriticAgent:
     def _run_code_checks(
             self,
             session: UserSession,
-            recommendations: List[CarRecommendation],
+            recommendations: List[PlannedCar],
             tool_cars: List[Car],
     ) -> List[str]:
         """Проверяет формальные правила без LLM."""
@@ -88,8 +87,8 @@ class CriticAgent:
 
         return issues
 
+    @staticmethod
     def _check_must_not_have(
-            self,
             car: Car,
             must_not_have: List[str],
             issues: List[str],
@@ -117,7 +116,7 @@ class CriticAgent:
     def _run_llm_checks(
             self,
             session: UserSession,
-            recommendations: List[CarRecommendation],
+            recommendations: List[PlannedCar],
             tool_cars: List[Car],
             user_message: str,
     ) -> CriticResult:
@@ -146,7 +145,8 @@ class CriticAgent:
 
         return CriticResult.model_validate_json(raw_response)
 
-    def _session_to_dict(self, session: UserSession) -> Dict[str, Any]:
+    @staticmethod
+    def _session_to_dict(session: UserSession) -> Dict[str, Any]:
         """Преобразует UserSession в словарь для проверки."""
 
         return {
@@ -164,7 +164,8 @@ class CriticAgent:
             "dialog_status": session.dialog_status.value,
         }
 
-    def _car_to_dict(self, car: Car) -> Dict[str, Any]:
+    @staticmethod
+    def _car_to_dict(car: Car) -> Dict[str, Any]:
         """Преобразует Car в словарь для проверки."""
 
         return {
