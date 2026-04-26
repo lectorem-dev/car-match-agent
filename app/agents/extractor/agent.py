@@ -158,6 +158,7 @@ class Extractor:
             user_prompt=json.dumps(payload, ensure_ascii=False, indent=2),
             response_schema=ExtractorResult.model_json_schema(),
             response_schema_name="extractor_result_repair",
+            max_output_tokens=1200,
         )
 
         return ExtractorResult.model_validate_json(raw_response)

@@ -180,6 +180,7 @@ class CriticAgent:
             user_prompt=json.dumps(payload, ensure_ascii=False, indent=2),
             response_schema=CriticResult.model_json_schema(),
             response_schema_name="critic_result",
+            max_output_tokens=1500,
         )
 
         return CriticResult.model_validate_json(raw_response)
