@@ -93,16 +93,20 @@ class Extractor:
             "current_session": self._session_to_dict(session),
             "previous_result": result.model_dump(mode="json"),
             "problem": (
-                "previous_result.session_update is incomplete. "
+                "previous_result.session_update is incomplete or not useful enough. "
                 "After applying it to current_session, required fields for recommendation are still missing. "
-                "Required fields: budget_max and purpose. "
+                "Required fields for recommendation: budget_max and purpose. "
                 "Do not ask a clarifying question in this repair step. "
+                "Return a FULL session_update object with all fields. "
+                "Do not omit any SessionUpdate fields. "
+                "Use null for unknown nullable fields, [] for unknown lists, and '' for empty user_notes. "
                 "Extract all available requirements from user_message into session_update. "
                 "If the user message contains a car usage scenario, purpose must be filled. "
                 "If the user message is about cars but purpose is generic, use purpose='buy suitable car'."
             ),
             "required_output": (
                 "Return corrected ExtractorResult. "
+                "session_update must contain all SessionUpdate fields. "
                 "Set should_ask_clarifying_question=false."
             ),
         }

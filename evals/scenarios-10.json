@@ -1,0 +1,311 @@
+[
+  {
+    "id": "city_first_car_budget_auto",
+    "name": "Первая городская машина с автоматом до 15000",
+    "allow_clarifying_question": false,
+    "initial_session": null,
+    "steps": [
+      {
+        "step_type": "user_message",
+        "user_message": "Ищу первую машину для города до 15000 долларов, желательно автомат. Важно недорогое обслуживание."
+      },
+      {
+        "step_type": "expect_recommendation",
+        "acceptable_car_ids": [
+          "915629b1-7d48-48f4-8eae-f9b19d403862",
+          "6042a84b-2d56-41d0-b75e-0f95ffea693b"
+        ]
+      },
+      {
+        "step_type": "user_select_car",
+        "selected_car_id": "915629b1-7d48-48f4-8eae-f9b19d403862"
+      },
+      {
+        "step_type": "user_request_reservation",
+        "user_message": "Хочу забронировать выбранную машину"
+      },
+      {
+        "step_type": "expect_reservation_created"
+      }
+    ]
+  },
+  {
+    "id": "family_big_car_for_travel",
+    "name": "Большая семейная машина для поездок",
+    "allow_clarifying_question": false,
+    "initial_session": null,
+    "steps": [
+      {
+        "step_type": "user_message",
+        "user_message": "Нужна машина для большой семьи, часто ездим с детьми и багажом. Бюджет до 32000 долларов, хочу автомат и комфорт в поездках."
+      },
+      {
+        "step_type": "expect_recommendation",
+        "acceptable_car_ids": [
+          "62b9b3cb-87a1-435a-8037-341c293adea0",
+          "da6df681-6359-44c5-aff5-2741042f2ec3",
+          "3ad30894-487d-49cb-b118-e4ef38297834"
+        ]
+      },
+      {
+        "step_type": "user_select_car",
+        "selected_car_id": "62b9b3cb-87a1-435a-8037-341c293adea0"
+      },
+      {
+        "step_type": "user_request_reservation",
+        "user_message": "Бронируй этот вариант"
+      },
+      {
+        "step_type": "expect_reservation_created"
+      }
+    ]
+  },
+  {
+    "id": "bad_roads_dacha_budget",
+    "name": "Дача и плохие дороги при ограниченном бюджете",
+    "allow_clarifying_question": false,
+    "initial_session": null,
+    "steps": [
+      {
+        "step_type": "user_message",
+        "user_message": "Ищу машину до 16000 долларов для дачи, плохих дорог и зимы. Автомат не обязателен, важнее полный привод и простое владение."
+      },
+      {
+        "step_type": "expect_recommendation",
+        "acceptable_car_ids": [
+          "a9aeb110-87ca-4f94-8070-d1f6bb42f0bd"
+        ]
+      },
+      {
+        "step_type": "user_select_car",
+        "selected_car_id": "a9aeb110-87ca-4f94-8070-d1f6bb42f0bd"
+      },
+      {
+        "step_type": "user_request_reservation",
+        "user_message": "Оформим бронь на выбранную машину"
+      },
+      {
+        "step_type": "expect_reservation_created"
+      }
+    ]
+  },
+  {
+    "id": "winter_awd_automatic_medium_budget",
+    "name": "Зима, полный привод и автомат до 27000",
+    "allow_clarifying_question": false,
+    "initial_session": null,
+    "steps": [
+      {
+        "step_type": "user_message",
+        "user_message": "Нужен кроссовер для зимы и поездок за город. Бюджет до 27000 долларов, обязательно полный привод, желательно автомат."
+      },
+      {
+        "step_type": "expect_recommendation",
+        "acceptable_car_ids": [
+          "3ad30894-487d-49cb-b118-e4ef38297834",
+          "b825206a-7b36-4981-a555-8ee0a30b4e50",
+          "85a6e932-89d9-4710-ba43-ce26e0398588"
+        ]
+      },
+      {
+        "step_type": "user_select_car",
+        "selected_car_id": "b825206a-7b36-4981-a555-8ee0a30b4e50"
+      },
+      {
+        "step_type": "user_request_reservation",
+        "user_message": "Хочу забронировать выбранную"
+      },
+      {
+        "step_type": "expect_reservation_created"
+      }
+    ]
+  },
+  {
+    "id": "business_highway_diesel_sedan",
+    "name": "Комфортный автомобиль для трассы и представительских задач",
+    "allow_clarifying_question": false,
+    "initial_session": null,
+    "steps": [
+      {
+        "step_type": "user_message",
+        "user_message": "Подбери комфортную машину для трассы и деловых поездок. Бюджет до 30000 долларов, хочу автомат, престиж и экономичность на больших пробегах."
+      },
+      {
+        "step_type": "expect_recommendation",
+        "acceptable_car_ids": [
+          "afd59ea2-4eb9-48bf-8866-60a8728576f1",
+          "b7bb2505-43a2-4163-adff-96c1a7d68ee7"
+        ]
+      },
+      {
+        "step_type": "user_select_car",
+        "selected_car_id": "afd59ea2-4eb9-48bf-8866-60a8728576f1"
+      },
+      {
+        "step_type": "user_request_reservation",
+        "user_message": "Забронируй этот седан"
+      },
+      {
+        "step_type": "expect_reservation_created"
+      }
+    ]
+  },
+  {
+    "id": "compact_city_style_auto",
+    "name": "Компактная стильная машина для города",
+    "allow_clarifying_question": false,
+    "initial_session": null,
+    "steps": [
+      {
+        "step_type": "user_message",
+        "user_message": "Хочу небольшую стильную машину для города и парковки в плотной застройке. Семьи нет, бюджет до 18000 долларов, нужен автомат."
+      },
+      {
+        "step_type": "expect_recommendation",
+        "acceptable_car_ids": [
+          "b6b1ae84-1fe1-4c6b-9008-f7b859e282af",
+          "6042a84b-2d56-41d0-b75e-0f95ffea693b",
+          "269a1df3-cda2-4634-b171-b863ab45b9c2"
+        ]
+      },
+      {
+        "step_type": "user_select_car",
+        "selected_car_id": "b6b1ae84-1fe1-4c6b-9008-f7b859e282af"
+      },
+      {
+        "step_type": "user_request_reservation",
+        "user_message": "Давай забронируем Mini"
+      },
+      {
+        "step_type": "expect_reservation_created"
+      }
+    ]
+  },
+  {
+    "id": "electric_short_city_routes",
+    "name": "Электромобиль для коротких городских маршрутов",
+    "allow_clarifying_question": false,
+    "initial_session": null,
+    "steps": [
+      {
+        "step_type": "user_message",
+        "user_message": "Нужен электромобиль для города до 16000 долларов. Езжу недалеко, зарядка есть дома, дальние поездки не нужны."
+      },
+      {
+        "step_type": "expect_recommendation",
+        "acceptable_car_ids": [
+          "6042a84b-2d56-41d0-b75e-0f95ffea693b"
+        ]
+      },
+      {
+        "step_type": "user_select_car",
+        "selected_car_id": "6042a84b-2d56-41d0-b75e-0f95ffea693b"
+      },
+      {
+        "step_type": "user_request_reservation",
+        "user_message": "Бронируй Nissan Leaf"
+      },
+      {
+        "step_type": "expect_reservation_created"
+      }
+    ]
+  },
+  {
+    "id": "family_trunk_without_suv",
+    "name": "Семья и большой багажник без кроссовера",
+    "allow_clarifying_question": false,
+    "initial_session": null,
+    "steps": [
+      {
+        "step_type": "user_message",
+        "user_message": "Ищу семейную машину до 18000 долларов, нужен большой багажник. Кроссовер не обязателен, лучше практичный вариант для работы и трассы."
+      },
+      {
+        "step_type": "expect_recommendation",
+        "acceptable_car_ids": [
+          "9659f401-9962-420c-97ab-6506dd842b0b",
+          "901cfdf4-8d6d-4ba4-962e-e70cc90a5ecb"
+        ]
+      },
+      {
+        "step_type": "user_select_car",
+        "selected_car_id": "9659f401-9962-420c-97ab-6506dd842b0b"
+      },
+      {
+        "step_type": "user_request_reservation",
+        "user_message": "Хочу забронировать Octavia"
+      },
+      {
+        "step_type": "expect_reservation_created"
+      }
+    ]
+  },
+  {
+    "id": "premium_hybrid_family_suv",
+    "name": "Гибридный семейный SUV выше среднего бюджета",
+    "allow_clarifying_question": false,
+    "initial_session": null,
+    "steps": [
+      {
+        "step_type": "user_message",
+        "user_message": "Нужен свежий семейный кроссовер до 35000 долларов. Желательно гибрид, полный привод, экономичность в городе и возможность ездить зимой."
+      },
+      {
+        "step_type": "expect_recommendation",
+        "acceptable_car_ids": [
+          "45c7eeef-f1ac-424a-8611-f2236be96f05",
+          "da6df681-6359-44c5-aff5-2741042f2ec3"
+        ]
+      },
+      {
+        "step_type": "user_select_car",
+        "selected_car_id": "45c7eeef-f1ac-424a-8611-f2236be96f05"
+      },
+      {
+        "step_type": "user_request_reservation",
+        "user_message": "Забронируй RAV4"
+      },
+      {
+        "step_type": "expect_reservation_created"
+      }
+    ]
+  },
+  {
+    "id": "clarification_then_family_recommendation",
+    "name": "Недостаточно данных, затем подбор после уточнения",
+    "allow_clarifying_question": true,
+    "initial_session": null,
+    "steps": [
+      {
+        "step_type": "user_message",
+        "user_message": "Мне нужна машина, но я пока не понимаю какая. Посоветуй что-нибудь."
+      },
+      {
+        "step_type": "expect_clarifying_question"
+      },
+      {
+        "step_type": "user_message",
+        "user_message": "Семья из пяти человек, бюджет до 32000 долларов, нужны поездки с детьми и багажом, хочу автомат."
+      },
+      {
+        "step_type": "expect_recommendation",
+        "acceptable_car_ids": [
+          "62b9b3cb-87a1-435a-8037-341c293adea0",
+          "da6df681-6359-44c5-aff5-2741042f2ec3",
+          "3ad30894-487d-49cb-b118-e4ef38297834"
+        ]
+      },
+      {
+        "step_type": "user_select_car",
+        "selected_car_id": "62b9b3cb-87a1-435a-8037-341c293adea0"
+      },
+      {
+        "step_type": "user_request_reservation",
+        "user_message": "Теперь забронируй выбранную машину"
+      },
+      {
+        "step_type": "expect_reservation_created"
+      }
+    ]
+  }
+]

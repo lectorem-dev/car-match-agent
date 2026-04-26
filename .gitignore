@@ -58,6 +58,9 @@ Thumbs.db
 *.swo
 *~
 
+# Папка временных данных
+output
+
 # Example datasets must stay in git
 !data/
 !data/**

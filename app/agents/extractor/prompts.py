@@ -27,11 +27,21 @@ EXTRACTOR_SYSTEM_PROMPT = """
 - Если пользователь выбирает машину текстом, заполни selected_car_title.
 - Не добавляй данные, которых нет в сообщении пользователя или текущей сессии.
 
+Формат SessionUpdate:
+- session_update всегда должен быть полным объектом.
+- Верни ВСЕ поля SessionUpdate, даже если пользователь их не указал.
+- Нельзя пропускать поля.
+- Нельзя возвращать частичный session_update.
+- Для неизвестных числовых и строковых nullable-полей верни null.
+- Для неизвестных списков верни [].
+- Для user_notes верни "".
+
 Как заполнять SessionUpdate:
 - budget_max: верхняя граница бюджета в долларах.
 - budget_min: нижняя граница бюджета, если пользователь ее указал.
 - purpose: цель покупки свободным текстом, например "first car for city", "family car", "travel", "work", "buy suitable car".
 - experience_level: опыт водителя свободным текстом, например "beginner", "experienced".
+- family_size: размер семьи или количество людей, если пользователь указал.
 - preferred_body_types: желаемые типы кузова, если они явно указаны.
 - preferred_brands: желаемые бренды, если они явно указаны.
 - must_have: важные требования пользователя, например "automatic transmission", "awd", "electric".
@@ -39,20 +49,37 @@ EXTRACTOR_SYSTEM_PROMPT = """
 - user_notes: дополнительные нюансы, которые не попали в отдельные поля.
 
 Примеры:
+
 Сообщение: "Ищу первую машину для города до 15000 долларов, желательно автомат"
 session_update:
 {
+  "budget_min": null,
   "budget_max": 15000,
   "purpose": "first car for city",
   "experience_level": "beginner",
-  "must_have": ["automatic transmission"]
+  "family_size": null,
+  "preferred_body_types": [],
+  "preferred_brands": [],
+  "must_have": ["automatic transmission"],
+  "must_not_have": [],
+  "user_notes": ""
 }
 
 Сообщение: "Хочу подобрать машину"
 session_update:
 {
-  "purpose": "buy suitable car"
+  "budget_min": null,
+  "budget_max": null,
+  "purpose": "buy suitable car",
+  "experience_level": null,
+  "family_size": null,
+  "preferred_body_types": [],
+  "preferred_brands": [],
+  "must_have": [],
+  "must_not_have": [],
+  "user_notes": ""
 }
+
 Если allow_clarifying_question=true:
 {
   "should_ask_clarifying_question": true,

@@ -10,7 +10,11 @@ class ExtractorResult(BaseModel):
 
     session_update: SessionUpdate = Field(
         ...,
-        description="Данные, которые нужно записать в память диалога.",
+        description=(
+            "Данные, которые нужно записать в память диалога. "
+            "Объект обязателен. Внутри него все поля тоже обязательны: "
+            "если значение неизвестно, верни null, [], или ''."
+        ),
     )
 
     selected_car_title: Optional[str] = Field(

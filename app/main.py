@@ -23,7 +23,7 @@ ENABLE_PIPELINE_LOGS = True
 def build_pipeline(project_root: Path) -> Pipeline:
     """Собирает агентный пайплайн и зависимости."""
 
-    catalog_path = project_root / "data" / "cars.json"
+    catalog_path = project_root / "data" / "cars-18.json"
 
     catalog = CarCatalog(json_path=str(catalog_path))
     catalog.validate_catalog()
@@ -78,7 +78,7 @@ def run_eval_suite(project_root: Path) -> None:
 
     pipeline = build_pipeline(project_root=project_root)
 
-    scenarios_path = project_root / "evals" / "scenarios-one.json"
+    scenarios_path = project_root / "evals" / "scenarios-10.json"
     loader = ScenarioLoader(json_path=str(scenarios_path))
     scenarios = loader.load()
 
