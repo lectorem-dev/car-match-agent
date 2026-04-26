@@ -8,7 +8,7 @@ class PlannedCar(BaseModel):
     """Одна машина, выбранная PlannerAgent."""
 
     car_id: UUID
-    reason: str  # Почему машина подходит пользователю.
+    reason: str = Field(max_length=80)  # Короткая машинная причина выбора.
     risk_note: Optional[str] = None  # Возможный минус машины.
 
 
@@ -18,7 +18,7 @@ class PlannerResult(BaseModel):
     recommendations: List[PlannedCar] = Field(
         default_factory=list,
         min_length=1,
-        max_length=5,
+        max_length=3,
     )
 
-    user_message: str  # Черновик ответа пользователю.
+    user_message: str = ""  # Техническое поле для совместимости, не используется в финальном ответе.

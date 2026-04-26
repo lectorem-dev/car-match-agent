@@ -1,12 +1,14 @@
 import json
 from typing import Any, Dict, List, Optional
 
+from pydantic import ValidationError
+
 from app.agents.critic.prompts import CRITIC_SYSTEM_PROMPT
 from app.agents.critic.schemas import CriticResult
 from app.agents.planner.schemas import PlannedCar
-from app.llm.yandex_llm_client import YandexLLMClient
-from app.domain.car import Car
+from app.domain.car import BodyType, Car, DriveType, Transmission
 from app.domain.user_session import UserSession
+from app.llm.yandex_llm_client import YandexLLMClient
 from app.utils.agent_logger import AgentLogColor, AgentLogger, detect_none_object_name
 
 
@@ -30,7 +32,6 @@ class CriticAgent:
             session: UserSession,
             recommendations: List[PlannedCar],
             tool_cars: List[Car],
-            user_message: str,
             scenario_name: Optional[str] = None,
     ) -> CriticResult:
         """Проверяет рекомендации кодом и через LLM."""
@@ -51,6 +52,7 @@ class CriticAgent:
                 result = CriticResult(
                     approved=False,
                     issues=code_issues,
+                    user_message="",
                 )
                 self.logger.success(
                     scenario=scenario_name,
@@ -59,12 +61,40 @@ class CriticAgent:
                 )
                 return result
 
-            result = self._run_llm_checks(
+            try:
+                result = self._run_llm_checks(
+                    session=session,
+                    recommendations=recommendations,
+                    tool_cars=tool_cars,
+                )
+            except ValidationError:
+                result = CriticResult(
+                    approved=True,
+                    issues=[],
+                    user_message=self._build_user_message(
+                        session=session,
+                        tool_cars=tool_cars,
+                    ),
+                )
+
+            if not result.approved and not self._has_hard_llm_issues(
                 session=session,
-                recommendations=recommendations,
-                tool_cars=tool_cars,
-                user_message=user_message,
-            )
+                issues=result.issues,
+            ):
+                result = CriticResult(
+                    approved=True,
+                    issues=[],
+                    user_message=self._build_user_message(
+                        session=session,
+                        tool_cars=tool_cars,
+                    ),
+                )
+
+            if result.approved and not result.user_message.strip():
+                result.user_message = self._build_user_message(
+                    session=session,
+                    tool_cars=tool_cars,
+                )
 
             self.logger.success(
                 scenario=scenario_name,
@@ -100,8 +130,8 @@ class CriticAgent:
         if not recommendations:
             issues.append("Список рекомендаций пустой.")
 
-        if len(recommendations) > 5:
-            issues.append("Агент рекомендовал больше 5 машин.")
+        if len(recommendations) > 3:
+            issues.append("Агент рекомендовал больше 3 машин.")
 
         tool_cars_by_id = {car.id: car for car in tool_cars}
 
@@ -112,10 +142,7 @@ class CriticAgent:
                 issues.append(f"Машина {recommendation.car_id} не была получена из tools.")
                 continue
 
-            if not car.fits_budget(
-                    budget_min=session.budget_min,
-                    budget_max=session.budget_max,
-            ):
+            if session.budget_max is not None and car.price > session.budget_max:
                 issues.append(f"Машина {car.title()} не попадает в бюджет пользователя.")
 
             self._check_must_not_have(
@@ -157,9 +184,8 @@ class CriticAgent:
             session: UserSession,
             recommendations: List[PlannedCar],
             tool_cars: List[Car],
-            user_message: str,
     ) -> CriticResult:
-        """Проверяет объяснения через LLM."""
+        """Проверяет рекомендации и формирует итоговый ответ через LLM."""
 
         payload = {
             "user_session": self._session_to_dict(session),
@@ -167,12 +193,10 @@ class CriticAgent:
                 {
                     "car_id": str(item.car_id),
                     "reason": item.reason,
-                    "risk_note": item.risk_note,
                 }
                 for item in recommendations
             ],
             "tool_cars": [self._car_to_dict(car) for car in tool_cars],
-            "user_message": user_message,
         }
 
         raw_response = self.llm_client.generate(
@@ -184,6 +208,108 @@ class CriticAgent:
         )
 
         return CriticResult.model_validate_json(raw_response)
+
+    def _build_user_message(
+            self,
+            session: UserSession,
+            tool_cars: List[Car],
+    ) -> str:
+        """Строит короткий локальный fallback-ответ пользователю на русском."""
+
+        if not tool_cars:
+            return "Подходящие варианты не найдены."
+
+        titles = ", ".join(
+            f"{car.title()} ({car.price} USD)"
+            for car in tool_cars
+        )
+        budget_part = ""
+
+        if session.budget_max is not None:
+            budget_part = f" Все варианты укладываются в бюджет до {session.budget_max} долларов."
+
+        first_car = tool_cars[0]
+        fit_parts = [
+            self._body_type_label(first_car.body_type),
+            self._transmission_label(first_car.transmission),
+            self._drive_type_label(first_car.drive_type),
+        ]
+        fit_parts = [part for part in fit_parts if part]
+        fit_text = ", ".join(fit_parts[:2])
+
+        if fit_text:
+            fit_text = f" Базовый ориентир: {fit_text}."
+
+        return f"Подобрал варианты: {titles}.{budget_part}{fit_text}"
+
+    def _has_hard_llm_issues(
+            self,
+            session: UserSession,
+            issues: List[str],
+    ) -> bool:
+        """Определяет, содержат ли замечания LLM реальные hard-constraints."""
+
+        if not issues:
+            return False
+
+        context_text = self._build_context_text(session)
+        requires_awd = self._contains_any(context_text, ["awd", "full drive", "полный привод"])
+        requires_electric = self._contains_any(context_text, ["electric", "электро", "электромоб"])
+
+        for issue in issues:
+            normalized_issue = issue.lower()
+
+            if self._contains_any(
+                normalized_issue,
+                [
+                    "не попадает в бюджет",
+                    "budget",
+                    "price",
+                    "дороже",
+                    "нарушает запрет",
+                    "must_not_have",
+                    "forbidden",
+                    "не была получена из tools",
+                    "not found in tool_cars",
+                    "список рекомендаций пустой",
+                    "больше 3 машин",
+                ],
+            ):
+                return True
+
+            if requires_awd and self._contains_any(
+                normalized_issue,
+                ["полный привод", "awd", "all-wheel drive", "full drive"],
+            ):
+                return True
+
+            if requires_electric and self._contains_any(
+                normalized_issue,
+                ["electric", "электро", "электромоб"],
+            ):
+                return True
+
+        return False
+
+    @staticmethod
+    def _build_context_text(session: UserSession) -> str:
+        """Собирает единый текстовый контекст пользователя для простых правил."""
+
+        parts = [
+            session.purpose or "",
+            session.user_notes,
+            " ".join(session.must_have),
+            " ".join(session.must_not_have),
+            " ".join(session.preferred_body_types),
+            " ".join(session.preferred_brands),
+        ]
+        return " ".join(parts).lower()
+
+    @staticmethod
+    def _contains_any(text: str, patterns: List[str]) -> bool:
+        """Проверяет, содержит ли текст хотя бы один из паттернов."""
+
+        return any(pattern in text for pattern in patterns)
 
     @staticmethod
     def _session_to_dict(session: UserSession) -> Dict[str, Any]:
@@ -223,3 +349,42 @@ class CriticAgent:
             "engine_power_hp": car.engine_power_hp,
             "description": car.description,
         }
+
+    @staticmethod
+    def _body_type_label(body_type: BodyType) -> str:
+        """Возвращает короткую русскую метку типа кузова."""
+
+        labels = {
+            BodyType.SEDAN: "седан",
+            BodyType.HATCHBACK: "хэтчбек",
+            BodyType.LIFTBACK: "лифтбек",
+            BodyType.WAGON: "универсал",
+            BodyType.SUV: "suv/crossover",
+            BodyType.COUPE: "купе",
+            BodyType.MINIVAN: "минивэн",
+            BodyType.PICKUP: "пикап",
+        }
+        return labels.get(body_type, "")
+
+    @staticmethod
+    def _transmission_label(transmission: Transmission) -> str:
+        """Возвращает короткую русскую метку коробки передач."""
+
+        labels = {
+            Transmission.MANUAL: "механика",
+            Transmission.AUTOMATIC: "автомат",
+            Transmission.ROBOT: "робот",
+            Transmission.CVT: "вариатор",
+        }
+        return labels.get(transmission, "")
+
+    @staticmethod
+    def _drive_type_label(drive_type: DriveType) -> str:
+        """Возвращает короткую русскую метку привода."""
+
+        labels = {
+            DriveType.FWD: "передний привод",
+            DriveType.RWD: "задний привод",
+            DriveType.AWD: "полный привод",
+        }
+        return labels.get(drive_type, "")

@@ -296,7 +296,6 @@ class Pipeline:
                 session=session,
                 recommendations=planner_result.recommendations,
                 tool_cars=tool_cars,
-                user_message=planner_result.user_message,
                 scenario_name=scenario_name,
             )
 
@@ -311,7 +310,7 @@ class Pipeline:
                 )
 
                 return PipelineResponse(
-                    user_message=planner_result.user_message,
+                    user_message=critic_result.user_message,
                     recommended_cars=recommendations,
                 )
 
