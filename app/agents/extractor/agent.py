@@ -1,11 +1,12 @@
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from app.agents.extractor.prompts import EXTRACTOR_SYSTEM_PROMPT
 from app.agents.extractor.schemas import ExtractorResult
 from app.domain.user_session import DialogStatus, UserSession
 from app.llm.yandex_llm_client import YandexLLMClient
 from app.services.session_update_service import SessionUpdateService
+from app.utils.agent_logger import AgentLogColor, AgentLogger, detect_none_object_name
 
 
 class Extractor:
@@ -15,32 +16,73 @@ class Extractor:
             self,
             llm_client: YandexLLMClient,
             session_update_service: SessionUpdateService,
+            enable_logs: bool = True,
     ) -> None:
         self.llm_client = llm_client
         self.session_update_service = session_update_service
+        self.logger = AgentLogger(
+            "ExtractorAgent",
+            enabled=enable_logs,
+            color=AgentLogColor.BRIGHT_YELLOW,
+        )
 
     def extract(
             self,
             user_message: str,
             session: UserSession,
             allow_clarifying_question: bool,
+            scenario_name: Optional[str] = None,
     ) -> ExtractorResult:
         """Извлекает требования из сообщения пользователя."""
 
-        result = self._make_extraction(
+        self.logger.start(
+            scenario=scenario_name,
             user_message=user_message,
-            session=session,
+            dialog_status=session.dialog_status.value,
             allow_clarifying_question=allow_clarifying_question,
         )
 
-        result = self._repair_if_needed(
-            user_message=user_message,
-            session=session,
-            result=result,
-            allow_clarifying_question=allow_clarifying_question,
-        )
+        try:
+            result = self._make_extraction(
+                user_message=user_message,
+                session=session,
+                allow_clarifying_question=allow_clarifying_question,
+            )
 
-        return result
+            self.logger.state(
+                scenario=scenario_name,
+                step="llm_result_parsed",
+                has_result=result is not None,
+                has_session_update=result.session_update is not None if result else False,
+            )
+
+            result = self._repair_if_needed(
+                user_message=user_message,
+                session=session,
+                result=result,
+                allow_clarifying_question=allow_clarifying_question,
+            )
+
+            self.logger.success(
+                scenario=scenario_name,
+                budget_max=result.session_update.budget_max,
+                purpose=result.session_update.purpose,
+                must_have=result.session_update.must_have,
+                ask_question=result.should_ask_clarifying_question,
+            )
+            return result
+        except Exception as error:
+            self.logger.fail(
+                error,
+                scenario=scenario_name,
+                user_message=user_message,
+                has_current_session=session is not None,
+                none_object=detect_none_object_name(
+                    error,
+                    current_session=session,
+                ),
+            )
+            raise
 
     def _make_extraction(
             self,

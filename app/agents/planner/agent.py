@@ -4,9 +4,10 @@ from typing import Any, Dict, List, Optional
 from app.agents.planner.prompts import PLANNER_SYSTEM_PROMPT
 from app.agents.planner.schemas import PlannerResult
 from app.catalog.car_catalog import CarCatalog
-from app.llm.yandex_llm_client import YandexLLMClient
 from app.domain.car import Car
 from app.domain.user_session import UserSession
+from app.llm.yandex_llm_client import YandexLLMClient
+from app.utils.agent_logger import AgentLogColor, AgentLogger, detect_none_object_name
 
 
 class PlannerAgent:
@@ -16,37 +17,73 @@ class PlannerAgent:
             self,
             llm_client: YandexLLMClient,
             catalog_tool: CarCatalog,
+            enable_logs: bool = True,
     ) -> None:
         self.llm_client = llm_client
         self.catalog_tool = catalog_tool
+        self.logger = AgentLogger(
+            "PlannerAgent",
+            enabled=enable_logs,
+            color=AgentLogColor.BRIGHT_MAGENTA,
+        )
 
     def plan(
             self,
             session: UserSession,
             critic_issues: Optional[List[str]] = None,
+            scenario_name: Optional[str] = None,
     ) -> PlannerResult:
         """Подбирает машины по текущей сессии пользователя."""
 
-        candidates = self._find_candidates(session=session)
+        candidates: Optional[List[Car]] = None
 
-        if not candidates:
-            raise ValueError("Не найдено машин-кандидатов для подбора.")
+        try:
+            candidates = self._find_candidates(session=session)
 
-        user_prompt = self._build_user_prompt(
-            session=session,
-            candidates=candidates,
-            critic_issues=critic_issues or [],
-        )
+            self.logger.start(
+                scenario=scenario_name,
+                budget_max=session.budget_max,
+                purpose=session.purpose,
+                candidates_count=len(candidates),
+            )
 
-        raw_response = self.llm_client.generate(
-            system_prompt=PLANNER_SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            response_schema=PlannerResult.model_json_schema(),
-            response_schema_name="planner_result",
-            max_output_tokens=1500,
-        )
+            if not candidates:
+                raise ValueError("Не найдено машин-кандидатов для подбора.")
 
-        return PlannerResult.model_validate_json(raw_response)
+            user_prompt = self._build_user_prompt(
+                session=session,
+                candidates=candidates,
+                critic_issues=critic_issues or [],
+            )
+
+            raw_response = self.llm_client.generate(
+                system_prompt=PLANNER_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                response_schema=PlannerResult.model_json_schema(),
+                response_schema_name="planner_result",
+                max_output_tokens=1500,
+            )
+
+            result = PlannerResult.model_validate_json(raw_response)
+            self.logger.success(
+                scenario=scenario_name,
+                recommendations_count=len(result.recommendations),
+                car_ids=[str(item.car_id) for item in result.recommendations],
+            )
+            return result
+        except Exception as error:
+            self.logger.fail(
+                error,
+                scenario=scenario_name,
+                has_user_session=session is not None,
+                candidates_count=len(candidates) if candidates is not None else None,
+                none_object=detect_none_object_name(
+                    error,
+                    user_session=session,
+                    candidate_cars=candidates,
+                ),
+            )
+            raise
 
     def _find_candidates(self, session: UserSession) -> List[Car]:
         """Находит кандидатов через каталог машин."""

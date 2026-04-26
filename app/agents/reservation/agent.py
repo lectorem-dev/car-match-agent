@@ -9,6 +9,7 @@ from app.agents.reservation.schemas import (
 from app.catalog.car_catalog import CarCatalog
 from app.domain.user_session import UserSession
 from app.llm.yandex_llm_client import YandexLLMClient
+from app.utils.agent_logger import AgentLogColor, AgentLogger, detect_none_object_name
 
 
 class ReservationAgent:
@@ -18,36 +19,69 @@ class ReservationAgent:
             self,
             llm_client: YandexLLMClient,
             catalog: CarCatalog,
+            enable_logs: bool = True,
     ) -> None:
         self.llm_client = llm_client
         self.catalog = catalog
+        self.logger = AgentLogger(
+            "ReservationAgent",
+            enabled=enable_logs,
+            color=AgentLogColor.BRIGHT_GREEN,
+        )
 
     def handle(
             self,
             user_message: str,
             session: UserSession,
+            scenario_name: Optional[str] = None,
     ) -> ReservationResult:
         """Обрабатывает запрос на бронь."""
 
-        result = self._make_decision(
+        self.logger.start(
+            scenario=scenario_name,
             user_message=user_message,
-            session=session,
+            dialog_status=session.dialog_status.value,
+            selected_car_id=str(session.selected_car_id) if session.selected_car_id else None,
         )
 
-        if result.intent == ReservationIntent.NOT_RESERVATION_REQUEST:
+        try:
+            result = self._make_decision(
+                user_message=user_message,
+                session=session,
+            )
+
+            if result.intent != ReservationIntent.NOT_RESERVATION_REQUEST:
+                self._try_select_car_by_title(
+                    session=session,
+                    selected_car_title=result.selected_car_title,
+                )
+
+            self.logger.success(
+                scenario=scenario_name,
+                intent=result.intent.value,
+                selected_car_title=result.selected_car_title,
+                current_selected_car_id=str(session.selected_car_id) if session.selected_car_id else None,
+            )
             return result
-
-        self._try_select_car_by_title(
-            session=session,
-            selected_car_title=result.selected_car_title,
-        )
-
-        return result
+        except Exception as error:
+            self.logger.fail(
+                error,
+                scenario=scenario_name,
+                user_message=user_message,
+                has_current_session=session is not None,
+                current_selected_car_id=str(session.selected_car_id) if session and session.selected_car_id else None,
+                none_object=detect_none_object_name(
+                    error,
+                    current_session=session,
+                ),
+            )
+            raise
 
     def is_reservation_request(
             self,
             user_message: str,
             session: UserSession,
+            scenario_name: Optional[str] = None,
     ) -> bool:
         """Проверяет, является ли сообщение просьбой о бронировании."""
 

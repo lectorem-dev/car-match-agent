@@ -1,5 +1,8 @@
 from pathlib import Path
+from contextlib import contextmanager
+import re
 import sys
+from typing import Iterator, TextIO
 
 
 if __package__ is None or __package__ == "":
@@ -18,11 +21,71 @@ from app.orchestrator.pipeline import Pipeline
 from app.services.session_update_service import SessionUpdateService
 
 
-# Флаг для вывода технических логов LLM-клиента.
-ENABLE_LLM_LOGS = True
 
-# Флаг для вывода логов пайплайна.
-ENABLE_PIPELINE_LOGS = True
+ENABLE_LLM_LOGS = False                    # Флаг для вывода технических логов LLM-клиента.
+ENABLE_PIPELINE_LOGS = True                # Флаг для вывода логов пайплайна.
+ENABLE_CONSOLE_LOG_FILE = True            # Флаг для сохранения вывода консоли в output/logs.txt.
+
+ENABLE_DOMAIN_GUARD_AGENT_LOGS = True      # Флаг для вывода логов DomainGuardAgent.
+ENABLE_RESERVATION_AGENT_LOGS = True       # Флаг для вывода логов ReservationAgent.
+ENABLE_EXTRACTOR_AGENT_LOGS = True         # Флаг для вывода логов ExtractorAgent.
+ENABLE_PLANNER_AGENT_LOGS = True           # Флаг для вывода логов PlannerAgent.
+ENABLE_CRITIC_AGENT_LOGS = True            # Флаг для вывода логов CriticAgent.
+
+
+class TeeStream:
+    """Дублирует вывод в консоль и в файл."""
+
+    ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+    def __init__(self, console_stream: TextIO, file_stream: TextIO) -> None:
+        self.console_stream = console_stream
+        self.file_stream = file_stream
+
+    def write(self, data: str) -> int:
+        self.console_stream.write(data)
+        self.file_stream.write(self.ANSI_ESCAPE_RE.sub("", data))
+        return len(data)
+
+    def flush(self) -> None:
+        self.console_stream.flush()
+        self.file_stream.flush()
+
+    def isatty(self) -> bool:
+        return self.console_stream.isatty()
+
+    @property
+    def encoding(self) -> str:
+        return self.console_stream.encoding
+
+    def __getattr__(self, name: str):
+        return getattr(self.console_stream, name)
+
+
+@contextmanager
+def duplicate_console_output(log_path: Path, enabled: bool) -> Iterator[None]:
+    """По флагу дублирует stdout/stderr в лог-файл."""
+
+    if not enabled:
+        yield
+        return
+
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with log_path.open("w", encoding="utf-8") as log_file:
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+
+        sys.stdout = TeeStream(original_stdout, log_file)
+        sys.stderr = TeeStream(original_stderr, log_file)
+
+        try:
+            yield
+        finally:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
 
 
 def build_pipeline(project_root: Path) -> Pipeline:
@@ -41,25 +104,30 @@ def build_pipeline(project_root: Path) -> Pipeline:
 
     domain_guard = DomainGuardAgent(
         llm_client=llm_client,
+        enable_logs=ENABLE_DOMAIN_GUARD_AGENT_LOGS,
     )
 
     reservation = ReservationAgent(
         llm_client=llm_client,
         catalog=catalog,
+        enable_logs=ENABLE_RESERVATION_AGENT_LOGS,
     )
 
     extractor = Extractor(
         llm_client=llm_client,
         session_update_service=session_update_service,
+        enable_logs=ENABLE_EXTRACTOR_AGENT_LOGS,
     )
 
     planner = PlannerAgent(
         llm_client=llm_client,
         catalog_tool=catalog,
+        enable_logs=ENABLE_PLANNER_AGENT_LOGS,
     )
 
     critic = CriticAgent(
         llm_client=llm_client,
+        enable_logs=ENABLE_CRITIC_AGENT_LOGS,
     )
 
     pipeline = Pipeline(
@@ -90,7 +158,10 @@ def run_eval_suite(project_root: Path) -> None:
     print(f"Сценарии загружены: {len(scenarios)}")
     print("Этап 2. Запуск eval-набора\n")
 
-    runner = ScenarioRunner(agent=pipeline)
+    runner = ScenarioRunner(
+        agent=pipeline,
+        enable_logs=ENABLE_PIPELINE_LOGS,
+    )
 
     passed_count = 0
 
@@ -114,8 +185,13 @@ def main() -> None:
     """Точка входа приложения."""
 
     project_root = Path(__file__).resolve().parent.parent
+    logs_path = project_root / "output" / "logs.txt"
 
-    run_eval_suite(project_root=project_root)
+    with duplicate_console_output(
+            log_path=logs_path,
+            enabled=ENABLE_CONSOLE_LOG_FILE,
+    ):
+        run_eval_suite(project_root=project_root)
 
 
 if __name__ == "__main__":

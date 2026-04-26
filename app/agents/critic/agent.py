@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from app.agents.critic.prompts import CRITIC_SYSTEM_PROMPT
 from app.agents.critic.schemas import CriticResult
@@ -7,6 +7,7 @@ from app.agents.planner.schemas import PlannedCar
 from app.llm.yandex_llm_client import YandexLLMClient
 from app.domain.car import Car
 from app.domain.user_session import UserSession
+from app.utils.agent_logger import AgentLogColor, AgentLogger, detect_none_object_name
 
 
 class CriticAgent:
@@ -15,8 +16,14 @@ class CriticAgent:
     def __init__(
             self,
             llm_client: YandexLLMClient,
+            enable_logs: bool = True,
     ) -> None:
         self.llm_client = llm_client
+        self.logger = AgentLogger(
+            "CriticAgent",
+            enabled=enable_logs,
+            color=AgentLogColor.BRIGHT_CYAN,
+        )
 
     def review(
             self,
@@ -24,29 +31,61 @@ class CriticAgent:
             recommendations: List[PlannedCar],
             tool_cars: List[Car],
             user_message: str,
+            scenario_name: Optional[str] = None,
     ) -> CriticResult:
         """Проверяет рекомендации кодом и через LLM."""
 
-        code_issues = self._run_code_checks(
-            session=session,
-            recommendations=recommendations,
-            tool_cars=tool_cars,
+        self.logger.start(
+            scenario=scenario_name,
+            recommendations_count=len(recommendations),
         )
 
-        if code_issues:
-            return CriticResult(
-                approved=False,
-                issues=code_issues,
+        try:
+            code_issues = self._run_code_checks(
+                session=session,
+                recommendations=recommendations,
+                tool_cars=tool_cars,
             )
 
-        llm_result = self._run_llm_checks(
-            session=session,
-            recommendations=recommendations,
-            tool_cars=tool_cars,
-            user_message=user_message,
-        )
+            if code_issues:
+                result = CriticResult(
+                    approved=False,
+                    issues=code_issues,
+                )
+                self.logger.success(
+                    scenario=scenario_name,
+                    approved=result.approved,
+                    issues=result.issues,
+                )
+                return result
 
-        return llm_result
+            result = self._run_llm_checks(
+                session=session,
+                recommendations=recommendations,
+                tool_cars=tool_cars,
+                user_message=user_message,
+            )
+
+            self.logger.success(
+                scenario=scenario_name,
+                approved=result.approved,
+                issues=result.issues,
+            )
+            return result
+        except Exception as error:
+            self.logger.fail(
+                error,
+                scenario=scenario_name,
+                has_current_session=session is not None,
+                recommendations_count=len(recommendations),
+                none_object=detect_none_object_name(
+                    error,
+                    current_session=session,
+                    recommended_cars=recommendations,
+                    tool_cars=tool_cars,
+                ),
+            )
+            raise
 
     def _run_code_checks(
             self,
