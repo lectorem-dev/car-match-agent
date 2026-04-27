@@ -5,7 +5,7 @@ from app.agents.extractor.extractor_prompts import EXTRACTOR_SYSTEM_PROMPT
 from app.agents.extractor.extractor_schemas import ExtractorResult
 from app.domain.user_session import DialogStatus, UserSession
 from app.llm.yandex_llm_client import YandexLLMClient
-from app.services.session_update_service import SessionUpdateService
+from app.session.session_update_service import SessionUpdateService
 from app.utils.agent_logger import AgentLogColor, AgentLogger, detect_none_object_name
 
 

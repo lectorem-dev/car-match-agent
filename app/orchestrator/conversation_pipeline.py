@@ -12,11 +12,11 @@ from app.agents.reservation.reservation_schemas import (
     ReservationCreatedResult,
     ReservationIntent,
 )
-from app.catalog.car_catalog import CarCatalog
+from app.agent_tools.car_catalog import CarCatalog
 from app.domain.car import Car
 from app.domain.user_session import DialogStatus, UserSession
-from app.orchestrator.schemas import PipelineResponse, RecommendedCar
-from app.services.session_update_service import SessionUpdateService
+from app.orchestrator.orchestrator_schemas import PipelineResponse, RecommendedCar
+from app.session.session_update_service import SessionUpdateService
 from app.utils.agent_logger import AgentLogColor, AgentLogger, detect_none_object_name
 
 

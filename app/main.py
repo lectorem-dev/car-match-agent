@@ -13,18 +13,18 @@ from app.agents.guard.guard_agent import DomainGuardAgent
 from app.agents.extractor.extractor_agent import Extractor
 from app.agents.planner.planner_agent import PlannerAgent
 from app.agents.reservation.reservation_agent import ReservationAgent
-from app.catalog.car_catalog import CarCatalog
-from app.evals.loader import ScenarioLoader
-from app.evals.runner import ScenarioRunner
+from app.agent_tools.car_catalog import CarCatalog
+from app.evals.eval_loader import ScenarioLoader
+from app.evals.eval_runner import ScenarioRunner
 from app.llm.yandex_llm_client import YandexLLMClient
-from app.orchestrator.pipeline import Pipeline
-from app.services.session_update_service import SessionUpdateService
+from app.orchestrator.conversation_pipeline import Pipeline
+from app.session.session_update_service import SessionUpdateService
 
 
 
 ENABLE_LLM_LOGS = False                    # Флаг для вывода технических логов LLM-клиента.
 ENABLE_PIPELINE_LOGS = True                # Флаг для вывода логов пайплайна.
-ENABLE_CONSOLE_LOG_FILE = True            # Флаг для сохранения вывода консоли в output/logs.txt.
+ENABLE_CONSOLE_LOG_FILE = True             # Флаг для сохранения вывода консоли в txt файл
 
 ENABLE_DOMAIN_GUARD_AGENT_LOGS = True      # Флаг для вывода логов DomainGuardAgent.
 ENABLE_RESERVATION_AGENT_LOGS = True       # Флаг для вывода логов ReservationAgent.
@@ -91,7 +91,7 @@ def duplicate_console_output(log_path: Path, enabled: bool) -> Iterator[None]:
 def build_pipeline(project_root: Path) -> Pipeline:
     """Собирает агентный пайплайн и зависимости."""
 
-    catalog_path = project_root / "data" / "cars-18.json"
+    catalog_path = project_root / "data" / "cars.json"
 
     catalog = CarCatalog(json_path=str(catalog_path))
     catalog.validate_catalog()
@@ -151,7 +151,7 @@ def run_eval_suite(project_root: Path) -> None:
 
     pipeline = build_pipeline(project_root=project_root)
 
-    scenarios_path = project_root / "evals" / "scenarios-10.json"
+    scenarios_path = project_root / "evals" / "scenarios_full.json"
     loader = ScenarioLoader(json_path=str(scenarios_path))
     scenarios = loader.load()
 
@@ -185,7 +185,7 @@ def main() -> None:
     """Точка входа приложения."""
 
     project_root = Path(__file__).resolve().parent.parent
-    logs_path = project_root / "output" / "logs.txt"
+    logs_path = project_root / "output" / "eval_logs.txt"
 
     with duplicate_console_output(
             log_path=logs_path,

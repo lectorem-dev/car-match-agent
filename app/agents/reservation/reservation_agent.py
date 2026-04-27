@@ -6,7 +6,7 @@ from app.agents.reservation.reservation_schemas import (
     ReservationIntent,
     ReservationResult,
 )
-from app.catalog.car_catalog import CarCatalog
+from app.agent_tools.car_catalog import CarCatalog
 from app.domain.user_session import UserSession
 from app.llm.yandex_llm_client import YandexLLMClient
 from app.utils.agent_logger import AgentLogColor, AgentLogger, detect_none_object_name

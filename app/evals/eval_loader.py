@@ -4,7 +4,7 @@ from typing import List
 
 from pydantic import ValidationError
 
-from app.evals.schemas import TestScenario
+from app.evals.eval_schemas import TestScenario
 
 
 class ScenarioLoader:

@@ -10,7 +10,7 @@ from app.domain.car import Car
 
 class CarCatalog:
 
-    def __init__(self, json_path: str = "data/cars.json") -> None:
+    def __init__(self, json_path: str = "../data/cars.json") -> None:
         self.json_path = Path(json_path)
         self._cars: Optional[List[Car]] = None  # Кэш каталога.
 

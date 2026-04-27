@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from typing import Optional, Protocol
 
 from app.domain.user_session import UserSession
-from app.evals.judge import ScenarioJudge
-from app.evals.schemas import ScenarioStepType, TestScenario
-from app.orchestrator.schemas import PipelineResponse
+from app.evals.eval_judge import ScenarioJudge
+from app.evals.eval_schemas import ScenarioStepType, TestScenario
+from app.orchestrator.orchestrator_schemas import PipelineResponse
 from app.utils.agent_logger import AgentLogColor, AgentLogger, detect_none_object_name
 
 

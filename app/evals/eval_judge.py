@@ -2,8 +2,8 @@ from typing import List
 from uuid import UUID
 
 from app.domain.user_session import DialogStatus, UserSession
-from app.evals.schemas import ScenarioStep, ScenarioStepType, TestScenario
-from app.orchestrator.schemas import PipelineResponse
+from app.evals.eval_schemas import ScenarioStep, ScenarioStepType, TestScenario
+from app.orchestrator.orchestrator_schemas import PipelineResponse
 
 
 class ScenarioJudge:
