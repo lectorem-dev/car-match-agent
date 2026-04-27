@@ -1,6 +1,8 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
+from uuid import UUID
 
 from app.agents.critic.critic_agent import CriticAgent
+from app.agents.critic.critic_schemas import CriticCarReview
 from app.agents.guard.guard_agent import DomainGuardAgent
 from app.agents.guard.guard_schemas import DomainStatus
 from app.agents.extractor.extractor_agent import Extractor
@@ -299,25 +301,60 @@ class Pipeline:
                 scenario_name=scenario_name,
             )
 
-            if critic_result.approved:
+            approved_recommendations = self._filter_recommendations_by_ids(
+                recommendations=recommendations,
+                approved_car_ids=critic_result.approved_car_ids,
+            )
+
+            self.logger.state(
+                scenario=scenario_name,
+                step="critic_review_done",
+                recommendations_count=len(recommendations),
+                approved_count=len(critic_result.approved_car_ids),
+                rejected_count=len(critic_result.rejected_car_ids),
+                approved_car_ids=[str(car_id) for car_id in critic_result.approved_car_ids],
+                rejected_car_ids=[str(car_id) for car_id in critic_result.rejected_car_ids],
+                rejected_issues_by_car=self._rejected_issues_by_car(critic_result.car_reviews),
+            )
+
+            if critic_result.approved and approved_recommendations:
+                if session.dialog_status not in {
+                    DialogStatus.CAR_SELECTED,
+                    DialogStatus.READY_FOR_RESERVATION,
+                    DialogStatus.RESERVATION_CREATED,
+                }:
+                    session.selected_car_id = approved_recommendations[0].car_id
+
                 session.dialog_status = DialogStatus.READY_TO_RECOMMEND
 
                 self.logger.state(
                     scenario=scenario_name,
                     step="recommendation_ready",
-                    recommended_cars_count=len(recommendations),
+                    recommended_cars_count=len(approved_recommendations),
+                    approved_count=len(critic_result.approved_car_ids),
+                    rejected_count=len(critic_result.rejected_car_ids),
+                    approved_car_ids=[str(car_id) for car_id in critic_result.approved_car_ids],
+                    rejected_car_ids=[str(car_id) for car_id in critic_result.rejected_car_ids],
+                    rejected_issues_by_car=self._rejected_issues_by_car(critic_result.car_reviews),
+                    current_selected_car_id=self._selected_car_id_value(session),
                     dialog_status=session.dialog_status.value,
                 )
 
                 return PipelineResponse(
                     user_message=critic_result.user_message,
-                    recommended_cars=recommendations,
+                    recommended_cars=approved_recommendations,
                 )
 
             critic_issues = critic_result.issues
             self.logger.state(
                 scenario=scenario_name,
                 step="critic_rejected",
+                recommendations_count=len(recommendations),
+                approved_count=len(critic_result.approved_car_ids),
+                rejected_count=len(critic_result.rejected_car_ids),
+                approved_car_ids=[str(car_id) for car_id in critic_result.approved_car_ids],
+                rejected_car_ids=[str(car_id) for car_id in critic_result.rejected_car_ids],
+                rejected_issues_by_car=self._rejected_issues_by_car(critic_result.car_reviews),
                 issues=critic_issues,
             )
 
@@ -442,6 +479,35 @@ class Pipeline:
 
             if car is not None:
                 result.append(car)
+
+        return result
+
+    @staticmethod
+    def _filter_recommendations_by_ids(
+            recommendations: List[RecommendedCar],
+            approved_car_ids: List[UUID],
+    ) -> List[RecommendedCar]:
+        """Оставляет только те рекомендации, которые одобрил CriticAgent."""
+
+        approved_car_ids_set = set(approved_car_ids)
+
+        return [
+            recommendation
+            for recommendation in recommendations
+            if recommendation.car_id in approved_car_ids_set
+        ]
+
+    @staticmethod
+    def _rejected_issues_by_car(car_reviews: List[CriticCarReview]) -> Dict[str, List[str]]:
+        """Собирает issues только по отклоненным машинам для логов."""
+
+        result: Dict[str, List[str]] = {}
+
+        for review in car_reviews:
+            if review.approved:
+                continue
+
+            result[str(review.car_id)] = list(review.issues)
 
         return result
 
