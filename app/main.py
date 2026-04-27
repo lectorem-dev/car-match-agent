@@ -21,6 +21,11 @@ from app.orchestrator.conversation_pipeline import Pipeline
 from app.session.session_update_service import SessionUpdateService
 
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+CATALOG_JSON_PATH = PROJECT_ROOT    / "data"    / "cars.json"
+SCENARIOS_JSON_PATH = PROJECT_ROOT  / "evals"   / "scenarios_full.json"
+CONSOLE_LOG_PATH = PROJECT_ROOT     / "output"  / "eval_logs.txt"
 
 ENABLE_LLM_LOGS = False                    # Флаг для вывода технических логов LLM-клиента.
 ENABLE_PIPELINE_LOGS = True                # Флаг для вывода логов пайплайна.
@@ -88,12 +93,10 @@ def duplicate_console_output(log_path: Path, enabled: bool) -> Iterator[None]:
             sys.stderr = original_stderr
 
 
-def build_pipeline(project_root: Path) -> Pipeline:
+def build_pipeline() -> Pipeline:
     """Собирает агентный пайплайн и зависимости."""
 
-    catalog_path = project_root / "data" / "cars.json"
-
-    catalog = CarCatalog(json_path=str(catalog_path))
+    catalog = CarCatalog(json_path=str(CATALOG_JSON_PATH))
     catalog.validate_catalog()
 
     llm_client = YandexLLMClient(
@@ -144,15 +147,14 @@ def build_pipeline(project_root: Path) -> Pipeline:
     return pipeline
 
 
-def run_eval_suite(project_root: Path) -> None:
+def run_eval_suite() -> None:
     """Запускает тестовый набор сценариев."""
 
     print("Этап 1. Инициализация агента")
 
-    pipeline = build_pipeline(project_root=project_root)
+    pipeline = build_pipeline()
 
-    scenarios_path = project_root / "evals" / "scenarios_full.json"
-    loader = ScenarioLoader(json_path=str(scenarios_path))
+    loader = ScenarioLoader(json_path=str(SCENARIOS_JSON_PATH))
     scenarios = loader.load()
 
     print(f"Сценарии загружены: {len(scenarios)}")
@@ -184,14 +186,11 @@ def run_eval_suite(project_root: Path) -> None:
 def main() -> None:
     """Точка входа приложения."""
 
-    project_root = Path(__file__).resolve().parent.parent
-    logs_path = project_root / "output" / "eval_logs.txt"
-
     with duplicate_console_output(
-            log_path=logs_path,
+            log_path=CONSOLE_LOG_PATH,
             enabled=ENABLE_CONSOLE_LOG_FILE,
     ):
-        run_eval_suite(project_root=project_root)
+        run_eval_suite()
 
 
 if __name__ == "__main__":

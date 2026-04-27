@@ -51,11 +51,6 @@ class UserSession(BaseModel):
     dialog_status: DialogStatus = DialogStatus.INITIAL_SURVEY
 
     def has_required_data_for_recommendation(self) -> bool:
-        """
-        Минимум:
-        1. Верхняя граница бюджета.
-        2. Цель покупки.
-        """
         return self.budget_max is not None and self.purpose is not None
 
     def has_selected_car(self) -> bool:
