@@ -3,9 +3,9 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import ValidationError
 
-from app.agents.critic.prompts import CRITIC_SYSTEM_PROMPT
-from app.agents.critic.schemas import CriticResult
-from app.agents.planner.schemas import PlannedCar
+from app.agents.critic.critic_prompts import CRITIC_SYSTEM_PROMPT
+from app.agents.critic.critic_schemas import CriticResult
+from app.agents.planner.planner_schemas import PlannedCar
 from app.domain.car import BodyType, Car, DriveType, Transmission
 from app.domain.user_session import UserSession
 from app.llm.yandex_llm_client import YandexLLMClient

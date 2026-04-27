@@ -1,14 +1,14 @@
 from typing import List, Optional
 
-from app.agents.critic.agent import CriticAgent
-from app.agents.guard.agent import DomainGuardAgent
-from app.agents.guard.schemas import DomainStatus
-from app.agents.extractor.agent import Extractor
-from app.agents.extractor.schemas import ExtractorResult
-from app.agents.planner.agent import PlannerAgent
-from app.agents.planner.schemas import PlannerResult
-from app.agents.reservation.agent import ReservationAgent
-from app.agents.reservation.schemas import (
+from app.agents.critic.critic_agent import CriticAgent
+from app.agents.guard.guard_agent import DomainGuardAgent
+from app.agents.guard.guard_schemas import DomainStatus
+from app.agents.extractor.extractor_agent import Extractor
+from app.agents.extractor.extractor_schemas import ExtractorResult
+from app.agents.planner.planner_agent import PlannerAgent
+from app.agents.planner.planner_schemas import PlannerResult
+from app.agents.reservation.reservation_agent import ReservationAgent
+from app.agents.reservation.reservation_schemas import (
     ReservationCreatedResult,
     ReservationIntent,
 )

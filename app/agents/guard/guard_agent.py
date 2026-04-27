@@ -1,8 +1,8 @@
 import json
 from typing import Any, Dict, Optional
 
-from app.agents.guard.prompts import DOMAIN_GUARD_SYSTEM_PROMPT
-from app.agents.guard.schemas import DomainGuardResult, DomainStatus
+from app.agents.guard.guard_prompts import DOMAIN_GUARD_SYSTEM_PROMPT
+from app.agents.guard.guard_schemas import DomainGuardResult, DomainStatus
 from app.domain.user_session import UserSession
 from app.llm.yandex_llm_client import YandexLLMClient
 from app.utils.agent_logger import AgentLogColor, AgentLogger, detect_none_object_name

@@ -3,8 +3,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import ValidationError
 
-from app.agents.planner.prompts import PLANNER_SYSTEM_PROMPT
-from app.agents.planner.schemas import PlannedCar, PlannerResult
+from app.agents.planner.planner_prompts import PLANNER_SYSTEM_PROMPT
+from app.agents.planner.planner_schemas import PlannedCar, PlannerResult
 from app.catalog.car_catalog import CarCatalog
 from app.domain.car import Car
 from app.domain.user_session import UserSession

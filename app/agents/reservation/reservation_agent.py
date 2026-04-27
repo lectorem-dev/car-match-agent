@@ -1,8 +1,8 @@
 import json
 from typing import Any, Dict, Optional
 
-from app.agents.reservation.prompts import RESERVATION_SYSTEM_PROMPT
-from app.agents.reservation.schemas import (
+from app.agents.reservation.reservation_prompts import RESERVATION_SYSTEM_PROMPT
+from app.agents.reservation.reservation_schemas import (
     ReservationIntent,
     ReservationResult,
 )

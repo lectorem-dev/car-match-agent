@@ -8,11 +8,11 @@ from typing import Iterator, TextIO
 if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.agents.critic.agent import CriticAgent
-from app.agents.guard.agent import DomainGuardAgent
-from app.agents.extractor.agent import Extractor
-from app.agents.planner.agent import PlannerAgent
-from app.agents.reservation.agent import ReservationAgent
+from app.agents.critic.critic_agent import CriticAgent
+from app.agents.guard.guard_agent import DomainGuardAgent
+from app.agents.extractor.extractor_agent import Extractor
+from app.agents.planner.planner_agent import PlannerAgent
+from app.agents.reservation.reservation_agent import ReservationAgent
 from app.catalog.car_catalog import CarCatalog
 from app.evals.loader import ScenarioLoader
 from app.evals.runner import ScenarioRunner

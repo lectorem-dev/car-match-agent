@@ -1,8 +1,8 @@
 import json
 from typing import Any, Dict, Optional
 
-from app.agents.extractor.prompts import EXTRACTOR_SYSTEM_PROMPT
-from app.agents.extractor.schemas import ExtractorResult
+from app.agents.extractor.extractor_prompts import EXTRACTOR_SYSTEM_PROMPT
+from app.agents.extractor.extractor_schemas import ExtractorResult
 from app.domain.user_session import DialogStatus, UserSession
 from app.llm.yandex_llm_client import YandexLLMClient
 from app.services.session_update_service import SessionUpdateService

@@ -1,4 +1,4 @@
-from app.agents.extractor.schemas import SessionUpdate
+from app.agents.extractor.extractor_schemas import SessionUpdate
 from app.domain.user_session import DialogStatus, UserSession
 
 
