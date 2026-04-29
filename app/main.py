@@ -2,7 +2,7 @@ from pathlib import Path
 from contextlib import contextmanager
 import re
 import sys
-from typing import Iterator, TextIO
+from typing import Iterator, Optional, TextIO
 
 
 if __package__ is None or __package__ == "":
@@ -16,6 +16,7 @@ from app.agents.reservation.reservation_agent import ReservationAgent
 from app.agent_tools.car_catalog import CarCatalog
 from app.evals.eval_loader import ScenarioLoader
 from app.evals.eval_runner import ScenarioRunner
+from app.interactive.console_chat import run_interactive_chat
 from app.llm.yandex_llm_client import YandexLLMClient
 from app.orchestrator.conversation_pipeline import Pipeline
 from app.session.session_update_service import SessionUpdateService
@@ -28,14 +29,17 @@ SCENARIOS_JSON_PATH = PROJECT_ROOT  / "evals"   / "scenarios_full.json"
 CONSOLE_LOG_PATH = PROJECT_ROOT     / "output"  / "eval_logs.txt"
 
 ENABLE_LLM_LOGS = False                    # Флаг для вывода технических логов LLM-клиента.
-ENABLE_PIPELINE_LOGS = True                # Флаг для вывода логов пайплайна.
-ENABLE_CONSOLE_LOG_FILE = True             # Флаг для сохранения вывода консоли в txt файл
+ENABLE_PIPELINE_LOGS = False                # Флаг для вывода логов пайплайна.
+ENABLE_CONSOLE_LOG_FILE = False             # Флаг для сохранения вывода консоли в txt файл
 
-ENABLE_DOMAIN_GUARD_AGENT_LOGS = True      # Флаг для вывода логов DomainGuardAgent.
-ENABLE_RESERVATION_AGENT_LOGS = True       # Флаг для вывода логов ReservationAgent.
-ENABLE_EXTRACTOR_AGENT_LOGS = True         # Флаг для вывода логов ExtractorAgent.
-ENABLE_PLANNER_AGENT_LOGS = True           # Флаг для вывода логов PlannerAgent.
-ENABLE_CRITIC_AGENT_LOGS = True            # Флаг для вывода логов CriticAgent.
+ENABLE_DOMAIN_GUARD_AGENT_LOGS = False      # Флаг для вывода логов DomainGuardAgent.
+ENABLE_RESERVATION_AGENT_LOGS = False       # Флаг для вывода логов ReservationAgent.
+ENABLE_EXTRACTOR_AGENT_LOGS = False         # Флаг для вывода логов ExtractorAgent.
+ENABLE_PLANNER_AGENT_LOGS = False           # Флаг для вывода логов PlannerAgent.
+ENABLE_CRITIC_AGENT_LOGS = False            # Флаг для вывода логов CriticAgent.
+
+EVAL_MODE = False                           # Флаг запуска eval-сценариев.
+INTERACTIVE_MODE = True                   # Флаг запуска интерактивного чата в консоли.
 
 
 class TeeStream:
@@ -147,12 +151,13 @@ def build_pipeline() -> Pipeline:
     return pipeline
 
 
-def run_eval_suite() -> None:
+def run_eval_suite(pipeline: Optional[Pipeline] = None) -> None:
     """Запускает тестовый набор сценариев."""
 
     print("Этап 1. Инициализация агента")
 
-    pipeline = build_pipeline()
+    if pipeline is None:
+        pipeline = build_pipeline()
 
     loader = ScenarioLoader(json_path=str(SCENARIOS_JSON_PATH))
     scenarios = loader.load()
@@ -190,7 +195,13 @@ def main() -> None:
             log_path=CONSOLE_LOG_PATH,
             enabled=ENABLE_CONSOLE_LOG_FILE,
     ):
-        run_eval_suite()
+        pipeline = build_pipeline() if (EVAL_MODE or INTERACTIVE_MODE) else None
+
+        if EVAL_MODE:
+            run_eval_suite(pipeline=pipeline)
+
+        if INTERACTIVE_MODE:
+            run_interactive_chat(pipeline=pipeline)
 
 
 if __name__ == "__main__":
