@@ -16,6 +16,8 @@ from app.utils.agent_logger import AgentLogColor, AgentLogger, detect_none_objec
 class CriticAgent:
     """Агент проверки качества результата."""
 
+    MAX_RECOMMENDATIONS = 3
+
     def __init__(
             self,
             llm_client: YandexLLMClient,
@@ -73,7 +75,6 @@ class CriticAgent:
                         tool_cars=approved_tool_cars,
                     )
                     final_reviews, llm_issues, llm_user_message = self._merge_llm_result(
-                        session=session,
                         base_reviews=code_reviews,
                         llm_result=llm_result,
                     )
@@ -121,7 +122,7 @@ class CriticAgent:
             recommendations: List[PlannedCar],
             tool_cars: List[Car],
     ) -> tuple[List[CriticCarReview], List[str]]:
-        """Проверяет формальные правила без LLM по каждой машине отдельно."""
+        """Проверяет только формальные инварианты, которые не требуют LLM."""
 
         global_issues: List[str] = []
 
@@ -129,8 +130,10 @@ class CriticAgent:
             global_issues.append("Список рекомендаций пустой.")
             return [], global_issues
 
-        if len(recommendations) > 3:
-            global_issues.append("Агент рекомендовал больше 3 машин.")
+        if len(recommendations) > self.MAX_RECOMMENDATIONS:
+            global_issues.append(
+                f"Агент рекомендовал больше {self.MAX_RECOMMENDATIONS} машин."
+            )
 
         tool_cars_by_id = {car.id: car for car in tool_cars}
         reviews: List[CriticCarReview] = []
@@ -140,15 +143,12 @@ class CriticAgent:
             car = tool_cars_by_id.get(recommendation.car_id)
 
             if car is None:
-                car_issues.append(f"Машина {recommendation.car_id} не была получена из tools.")
-            else:
-                if session.budget_max is not None and car.price > session.budget_max:
-                    car_issues.append(f"Машина {car.title()} не попадает в бюджет пользователя.")
-
-                self._check_must_not_have(
-                    car=car,
-                    must_not_have=session.must_not_have,
-                    issues=car_issues,
+                car_issues.append(
+                    f"Машина {recommendation.car_id} не была получена из tools."
+                )
+            elif session.budget_max is not None and car.price > session.budget_max:
+                car_issues.append(
+                    f"Машина {car.title()} не попадает в бюджет пользователя."
                 )
 
             reviews.append(
@@ -160,32 +160,6 @@ class CriticAgent:
             )
 
         return reviews, global_issues
-
-    @staticmethod
-    def _check_must_not_have(
-            car: Car,
-            must_not_have: List[str],
-            issues: List[str],
-    ) -> None:
-        """Проверяет явные запреты пользователя."""
-
-        car_text = " ".join(
-            [
-                car.brand,
-                car.model,
-                car.body_type.value,
-                car.fuel_type.value,
-                car.transmission.value,
-                car.drive_type.value,
-                car.description,
-            ]
-        ).lower()
-
-        for forbidden_item in must_not_have:
-            if forbidden_item.lower() in car_text:
-                issues.append(
-                    f"Машина {car.title()} нарушает запрет пользователя: {forbidden_item}."
-                )
 
     def _run_llm_checks(
             self,
@@ -219,11 +193,10 @@ class CriticAgent:
 
     def _merge_llm_result(
             self,
-            session: UserSession,
             base_reviews: List[CriticCarReview],
             llm_result: CriticResult,
     ) -> tuple[List[CriticCarReview], List[str], str]:
-        """Объединяет кодовые проверки и ответ LLM, сохраняя локальные hard-checks."""
+        """Объединяет кодовые инварианты и смысловую оценку LLM."""
 
         llm_reviews_by_id = {
             review.car_id: review
@@ -239,20 +212,11 @@ class CriticAgent:
             llm_review = llm_reviews_by_id.get(base_review.car_id)
 
             if llm_review is None:
-                merged_reviews.append(base_review)
-                continue
-
-            issues = list(llm_review.issues)
-
-            if not llm_review.approved and not self._has_hard_llm_issues(
-                session=session,
-                issues=issues,
-            ):
                 merged_reviews.append(
                     CriticCarReview(
                         car_id=base_review.car_id,
-                        approved=True,
-                        issues=[],
+                        approved=False,
+                        issues=["LLM-критик не вернул проверку по этой машине."],
                     )
                 )
                 continue
@@ -261,7 +225,7 @@ class CriticAgent:
                 CriticCarReview(
                     car_id=base_review.car_id,
                     approved=llm_review.approved,
-                    issues=[] if llm_review.approved else issues,
+                    issues=[] if llm_review.approved else list(llm_review.issues),
                 )
             )
 
@@ -297,6 +261,17 @@ class CriticAgent:
         )
 
         approved = bool(approved_car_ids)
+
+        if len(approved_car_ids) > self.MAX_RECOMMENDATIONS:
+            approved = False
+            aggregated_issues = self._deduplicate_strings(
+                aggregated_issues + [
+                    (
+                        "После проверки осталось слишком много машин: "
+                        f"больше {self.MAX_RECOMMENDATIONS}."
+                    )
+                ]
+            )
 
         if approved:
             approved_cars = [
@@ -342,7 +317,9 @@ class CriticAgent:
         budget_part = ""
 
         if session.budget_max is not None:
-            budget_part = f" Все варианты укладываются в бюджет до {session.budget_max} долларов."
+            budget_part = (
+                f" Все варианты укладываются в бюджет до {session.budget_max} долларов."
+            )
 
         first_car = tool_cars[0]
         fit_parts = [
@@ -357,75 +334,6 @@ class CriticAgent:
             fit_text = f" Базовый ориентир: {fit_text}."
 
         return f"Подобрал варианты: {titles}.{budget_part}{fit_text}"
-
-    def _has_hard_llm_issues(
-            self,
-            session: UserSession,
-            issues: List[str],
-    ) -> bool:
-        """Определяет, содержат ли замечания LLM реальные hard-constraints."""
-
-        if not issues:
-            return False
-
-        context_text = self._build_context_text(session)
-        requires_awd = self._contains_any(context_text, ["awd", "full drive", "полный привод"])
-        requires_electric = self._contains_any(context_text, ["electric", "электро", "электромоб"])
-
-        for issue in issues:
-            normalized_issue = issue.lower()
-
-            if self._contains_any(
-                normalized_issue,
-                [
-                    "не попадает в бюджет",
-                    "budget",
-                    "price",
-                    "дороже",
-                    "нарушает запрет",
-                    "must_not_have",
-                    "forbidden",
-                    "не была получена из tools",
-                    "not found in tool_cars",
-                    "список рекомендаций пустой",
-                    "больше 3 машин",
-                ],
-            ):
-                return True
-
-            if requires_awd and self._contains_any(
-                normalized_issue,
-                ["полный привод", "awd", "all-wheel drive", "full drive"],
-            ):
-                return True
-
-            if requires_electric and self._contains_any(
-                normalized_issue,
-                ["electric", "электро", "электромоб"],
-            ):
-                return True
-
-        return False
-
-    @staticmethod
-    def _build_context_text(session: UserSession) -> str:
-        """Собирает единый текстовый контекст пользователя для простых правил."""
-
-        parts = [
-            session.purpose or "",
-            session.user_notes,
-            " ".join(session.must_have),
-            " ".join(session.must_not_have),
-            " ".join(session.preferred_body_types),
-            " ".join(session.preferred_brands),
-        ]
-        return " ".join(parts).lower()
-
-    @staticmethod
-    def _contains_any(text: str, patterns: List[str]) -> bool:
-        """Проверяет, содержит ли текст хотя бы один из паттернов."""
-
-        return any(pattern in text for pattern in patterns)
 
     @staticmethod
     def _session_to_dict(session: UserSession) -> Dict[str, Any]:
@@ -552,7 +460,12 @@ class CriticAgent:
                 continue
 
             if not review.issues:
-                issues.append(self._build_generic_rejection_issue(review=review, tool_cars_by_id=tool_cars_by_id))
+                issues.append(
+                    self._build_generic_rejection_issue(
+                        review=review,
+                        tool_cars_by_id=tool_cars_by_id,
+                    )
+                )
                 continue
 
             for issue in review.issues:

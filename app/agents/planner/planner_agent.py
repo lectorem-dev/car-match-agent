@@ -40,7 +40,7 @@ class PlannerAgent:
     ) -> PlannerResult:
         """Подбирает машины по текущей сессии пользователя."""
 
-        candidates: Optional[List[Car]] = None
+        None
         planner_candidates: Optional[List[Car]] = None
 
         try:

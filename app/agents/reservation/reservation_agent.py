@@ -81,7 +81,6 @@ class ReservationAgent:
             self,
             user_message: str,
             session: UserSession,
-            scenario_name: Optional[str] = None,
     ) -> bool:
         """Проверяет, является ли сообщение просьбой о бронировании."""
 
